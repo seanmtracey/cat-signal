@@ -141,9 +141,9 @@ func checkStatusOfRobot(checkCounter int){
 	
 			if shouldSignalError {
 				color.Magenta("\tAction needed?")
-				color.Red("\t‼️  Robot needs attention\n\n")
+				color.Red("\t‼️  Robot needs attention\n\n\n")
 			} else {
-				color.Green("\n\t✅ Robot is happy :)\n\n")
+				color.Green("\n\t✅ Robot is happy :)\n\n\n")
 			}
 	
 			color.Cyan(fmt.Sprintf(" > [ %s ] Waiting %d seconds before checking again...\n\n", getTimeString(), CHECK_INTERVAL))
