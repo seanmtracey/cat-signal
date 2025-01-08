@@ -9,6 +9,7 @@ import (
 
 	"github.com/joho/godotenv"
 	robot "github.com/tlkamp/litter-api/v2/pkg/client"
+	"github.com/fatih/color"
 )
 
 var USERNAME string
@@ -56,46 +57,47 @@ func checkStatusOfRobot(){
 	// Log in to the API
 	err := api.Login(ctx)
 	if err != nil {
-		fmt.Println("Error logging in - ", err)
+		color.Red("🚫 Could not log-in to robot.")
+		fmt.Println(err)
 		os.Exit(1)
+	} else {
+		color.Green("✅ Logged-in to robot service.")
 	}
 
 	// Fetch the robots
 	if err := api.FetchRobots(ctx); err != nil {
-		fmt.Println("Error fetching robots - ", err)
-		os.Exit(1)
+		color.Yellow(fmt.Sprintf("⚠️  Could not get robot details. Retrying in %d seconds...", CHECK_INTERVAL))
+		fmt.Println(err)
+		time.Sleep(time.Second * time.Duration(CHECK_INTERVAL))
+		checkStatusOfRobot()
+		return
 	}
 
 	// Loop through each robot and display details
 	for _, r := range api.Robots() {
-		fmt.Printf("Robot ID: %s\n", r.LitterRobotID)
-		fmt.Printf("Name: %s\n", r.Name)
+		color.Cyan(fmt.Sprintf("\tRobot ID: %s\n", r.LitterRobotID))
+		color.Cyan(fmt.Sprintf("\tName: %s\n", r.Name))
 
 		// Fetch unit status from the robot struct
 		unitStatus := r.UnitStatus
 
 		// Map unit status to human-readable string
 		statusText := mapUnitStatusToString(unitStatus)
-		fmt.Printf("Unit Status: %s\n", statusText)
+		color.Cyan(fmt.Sprintf("\tUnit Status: %s\n", statusText))
 
 		shouldSignalError := shouldSignalError(unitStatus)
 
-		fmt.Println("Needs attention?", shouldSignalError)
+		if shouldSignalError {
+			color.Yellow("⚠️  Robot needs attention")
+		} else {
+			color.Green("✅ Robot is happy :)")
+		}
 
-		fmt.Printf("Waiting %d seconds before checking again...", CHECK_INTERVAL)
+		color.Cyan(fmt.Sprintf("> Waiting %d seconds before checking again...", CHECK_INTERVAL))
 		time.Sleep(time.Second * time.Duration(CHECK_INTERVAL))
 
 		checkStatusOfRobot()
 
-		/*// Optionally, initiate a cycle for each robot
-		err := api.Cycle(ctx, r.LitterRobotID)
-		if err != nil {
-			fmt.Printf("Error initiating cycle for %s: %v\n", r.Name, err)
-		} else {
-			fmt.Printf("Cycle initiated for %s\n", r.Name)
-		}
-
-		fmt.Println("---------------")*/
 	}
 
 }
@@ -105,36 +107,48 @@ func main() {
 	// Load environment variables from .env file
 	dotenvErr := godotenv.Load()
 	if dotenvErr != nil {
-		fmt.Println("No .env file detected. Defaulting to system env-vars instead.")
+		color.Cyan(">  No .env file detected. Defaulting to system env-vars instead.")
 	}
 
 	// Retrieve credentials from environment variables
 	USERNAME = os.Getenv("ROBOT_EMAIL")
 	PASSWORD = os.Getenv("ROBOT_PASS")
+
+	shouldExit := false
 	
 	if USERNAME == "" {
-		fmt.Println("No username detected by script")
-		os.Exit(1)
+		color.Red("🚫 No username detected by script.")
+		shouldExit = true
+	} else {
+		color.Green("✅ Username detected in environment.")
 	}
 	
 	if PASSWORD == "" {
-		fmt.Println("No password detected by script")
+		color.Red("🚫 No password detected by script.")
+		shouldExit = true
+	} else {
+		color.Green("✅ Password detected in environment.")
+	}
+
+	if shouldExit == true {
 		os.Exit(1)
 	}
 	
 	interval := os.Getenv("CHECK_INTERVAL")
 
 	if interval == "" {
-		fmt.Println("No interval set.")
-		CHECK_INTERVAL = 5
+		color.Yellow("⚠️  No interval set. Defaulting to 60 seconds...")
+		CHECK_INTERVAL = 60
 	} else {
 		value, convErr := strconv.Atoi(interval)
 
 		if convErr != nil {
-			CHECK_INTERVAL = 5
+			CHECK_INTERVAL = 60
 		} else {
 			CHECK_INTERVAL = value
 		}
+
+		color.Green(fmt.Sprintf("✅ Checking intervale set to %d seconds.", CHECK_INTERVAL))
 
 	}
 
