@@ -88,12 +88,12 @@ func checkStatusOfRobot(){
 			shouldSignalError := shouldSignalError(unitStatus)
 	
 			if shouldSignalError {
-				color.Yellow("⚠️  Robot needs attention")
+				color.Red("‼️  Robot needs attention")
 			} else {
 				color.Green("✅ Robot is happy :)")
 			}
 	
-			color.Cyan(fmt.Sprintf("> Waiting %d seconds before checking again...", CHECK_INTERVAL))
+			color.Cyan(fmt.Sprintf(" > Waiting %d seconds before checking again...\n\n", CHECK_INTERVAL))
 			time.Sleep(time.Second * time.Duration(CHECK_INTERVAL))
 	
 		}
@@ -151,9 +151,11 @@ func main() {
 			CHECK_INTERVAL = value
 		}
 
-		color.Green(fmt.Sprintf("✅ Checking intervale set to %d seconds.", CHECK_INTERVAL))
+		color.Green(fmt.Sprintf("✅ Checking interval set to %d seconds.", CHECK_INTERVAL))
 
 	}
+
+	fmt.Println()
 
 	checkStatusOfRobot()
 
