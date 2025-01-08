@@ -1,4 +1,4 @@
-module siren
+module cat-signal
 
 go 1.22.2
 

@@ -70,35 +70,38 @@ func checkStatusOfRobot(){
 		fmt.Println(err)
 		time.Sleep(time.Second * time.Duration(CHECK_INTERVAL))
 		checkStatusOfRobot()
-		return
-	}
+		
+	} else {
 
-	// Loop through each robot and display details
-	for _, r := range api.Robots() {
-		color.Cyan(fmt.Sprintf("\tRobot ID: %s\n", r.LitterRobotID))
-		color.Cyan(fmt.Sprintf("\tName: %s\n", r.Name))
-
-		// Fetch unit status from the robot struct
-		unitStatus := r.UnitStatus
-
-		// Map unit status to human-readable string
-		statusText := mapUnitStatusToString(unitStatus)
-		color.Cyan(fmt.Sprintf("\tUnit Status: %s\n", statusText))
-
-		shouldSignalError := shouldSignalError(unitStatus)
-
-		if shouldSignalError {
-			color.Yellow("⚠️  Robot needs attention")
-		} else {
-			color.Green("✅ Robot is happy :)")
+		// Loop through each robot and display details
+		for _, r := range api.Robots() {
+			color.Cyan(fmt.Sprintf("\tRobot ID: %s\n", r.LitterRobotID))
+			color.Cyan(fmt.Sprintf("\tName: %s\n", r.Name))
+	
+			// Fetch unit status from the robot struct
+			unitStatus := r.UnitStatus
+	
+			// Map unit status to human-readable string
+			statusText := mapUnitStatusToString(unitStatus)
+			color.Cyan(fmt.Sprintf("\tUnit Status: %s\n", statusText))
+	
+			shouldSignalError := shouldSignalError(unitStatus)
+	
+			if shouldSignalError {
+				color.Yellow("⚠️  Robot needs attention")
+			} else {
+				color.Green("✅ Robot is happy :)")
+			}
+	
+			color.Cyan(fmt.Sprintf("> Waiting %d seconds before checking again...", CHECK_INTERVAL))
+			time.Sleep(time.Second * time.Duration(CHECK_INTERVAL))
+	
 		}
-
-		color.Cyan(fmt.Sprintf("> Waiting %d seconds before checking again...", CHECK_INTERVAL))
-		time.Sleep(time.Second * time.Duration(CHECK_INTERVAL))
 
 		checkStatusOfRobot()
 
 	}
+
 
 }
 
