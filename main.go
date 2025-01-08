@@ -116,13 +116,15 @@ func checkStatusOfRobot(checkCounter int){
 		
 	} else {
 
+		registeredRobots := API.Robots()
+
 		// Loop through each robot and display details
-		for idx, r := range API.Robots() {
-			color.Magenta(fmt.Sprintf("\n>>>>>>>>>>\n>> Robot %d:\n>>>>>>>>>>\n\n", idx))
+		for idx, r := range registeredRobots {
+			color.Magenta(fmt.Sprintf("\n>>>>>>>>>>>>>>>>>>>>\n>> Robot %d of %d\n>>>>>>>>>>>>>>>>>>>>\n\n", idx + 1, len(registeredRobots) ))
 			color.Magenta("\tRobot ID:")
 			color.White(fmt.Sprintf("\t%s\n\n", r.LitterRobotID))
 			
-			color.Magenta("\tName:")
+			color.Magenta("\tRobot Name:")
 			color.White(fmt.Sprintf("\t%s\n\n", r.Name))
 	
 			// Fetch unit status from the robot struct
@@ -130,7 +132,7 @@ func checkStatusOfRobot(checkCounter int){
 	
 			// Map unit status to human-readable string
 			statusText := mapUnitStatusToString(unitStatus)
-			color.Magenta("\tUnit Status:\n")
+			color.Magenta("\tRobot Status:\n")
 			color.White(fmt.Sprintf("\t%s\n\n", statusText))
 	
 			shouldSignalError := shouldSignalError(unitStatus)
