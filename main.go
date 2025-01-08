@@ -76,25 +76,29 @@ func shouldSignalError(status float64) bool {
 
 // mapUnitStatusToString converts unit status codes to human-readable strings
 func mapUnitStatusToString(status float64) string {
+	
 	statusMap := map[float64]string{
-		0:  "Ready.",
-		1:  "Clean Cycle in Progress.",
-		2:  "Clean Cycle Complete.",
-		3:  "Cat Sensor Fault.",
-		4:  "Drawer full; Will still cycle.",
-		5:  "Drawer full; Will still cycle",
-		6:  "Cat Sensor Timing.",
-		7:  "Cat Sensor Interrupt.",
-		8:  "Bonnet Removed.",
-		9:  "Paused.",
-		10: "Off.",
-		11: "Drawer full; Will not cycle.",
-		12: "Drawer full; Will not cycle.",
+		0:  "(RDY) Ready.",
+		1:  "(CCP) Clean Cycle in Progress.",
+		2:  "(CCC) Clean Cycle Complete.",
+		3:  "(CSF) Cat Sensor Fault.",
+		4:  "(DF1) Drawer full; Will still cycle.",
+		5:  "(DF2) Drawer full; Will still cycle",
+		6:  "(CST) Cat Sensor Timing.",
+		7:  "(CSI) Cat Sensor Interrupt.",
+		8:  "(BR) Bonnet Removed.",
+		9:  "(P) Paused.",
+		10: "(OFF) Off.",
+		11: "(SDF) Drawer full; Will not cycle.",
+		12: "(DFS) Drawer full; Will not cycle.",
 	}
+
 	if description, ok := statusMap[status]; ok {
 		return description
 	}
+
 	return "Unknown Status"
+
 }
 
 func checkStatusOfRobot(checkCounter int){
