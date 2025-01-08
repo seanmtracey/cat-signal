@@ -1,6 +1,6 @@
 module cat-signal
 
-go 1.22.2
+go 1.22
 
 require (
 	github.com/fatih/color v1.18.0
