@@ -6,6 +6,7 @@ import (
 	"time"
 	"context"
 	"strconv"
+	"math"
 
 	"github.com/joho/godotenv"
 	robot "github.com/tlkamp/litter-api/v2/pkg/client"
@@ -16,6 +17,7 @@ var USERNAME string
 var PASSWORD string
 var CHECK_INTERVAL int
 
+var LOGIN_RETRY_DELAY float64 = 5.0
 var API *robot.Client
 var CTX context.Context
 
@@ -36,11 +38,25 @@ func loginToServiceAndSetContext(){
 	// Log in to the API
 	err := API.Login(CTX)
 	if err != nil {
-		color.Red("🚫 Could not log-in to robot.")
-		fmt.Println(err)
-		os.Exit(1)
+		
+		LOGIN_RETRY_DELAY = math.Round(LOGIN_RETRY_DELAY * 1.25)
+
+		if  LOGIN_RETRY_DELAY > 300{
+			LOGIN_RETRY_DELAY = 300
+		}
+
+		color.Red("🚫 Could not login to robot.")		
+		color.Red(" > " + fmt.Sprintf("%s", err.Error()))
+		color.Red(fmt.Sprintf(" > Waiting %f seconds before retrying login...\n\n", LOGIN_RETRY_DELAY))
+
+		time.Sleep(time.Second * time.Duration(LOGIN_RETRY_DELAY))
+		loginToServiceAndSetContext()
+
 	} else {
+
 		color.Green("✅ Logged-in to robot service.")
+		LOGIN_RETRY_DELAY = 5.0
+
 	}
 
 }
@@ -82,6 +98,7 @@ func checkStatusOfRobot(checkCounter int){
 	totalTimeSinceLastLogin := time.Second * time.Duration(checkCounter * CHECK_INTERVAL) 
 
 	if totalTimeSinceLastLogin >= time.Minute * 10 {
+		color.Cyan(" > Session is too old. Re-authenticating...")
 		loginToServiceAndSetContext()
 		checkCounter = 0
 	}
@@ -89,7 +106,7 @@ func checkStatusOfRobot(checkCounter int){
 	// Fetch the robots
 	if err := API.FetchRobots(CTX); err != nil {
 		color.Yellow(fmt.Sprintf("⚠️  Could not get robot details. Retrying in %d seconds...", CHECK_INTERVAL))
-		fmt.Println(err)
+		color.Yellow(" > " + fmt.Sprintf("%s", err.Error()))
 		time.Sleep(time.Second * time.Duration(CHECK_INTERVAL))
 		checkStatusOfRobot(checkCounter + 1)
 		
