@@ -106,7 +106,7 @@ func checkStatusOfRobot(checkCounter int){
 	totalTimeSinceLastLogin := time.Second * time.Duration(checkCounter * CHECK_INTERVAL) 
 
 	if totalTimeSinceLastLogin >= time.Minute * 10 {
-		color.Cyan(" > Session is too old. Re-authenticating...")
+		color.Yellow(" > Session is too old. Re-authenticating...")
 		loginToServiceAndSetContext()
 		checkCounter = 0
 	}
