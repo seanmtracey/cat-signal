@@ -107,6 +107,8 @@ func checkStatusOfRobot(checkCounter int){
 		checkCounter = 0
 	}
 
+	color.Cyan(fmt.Sprintf("\n > [ %s ] Getting status of litter robots...\n", getTimeString()))
+
 	// Fetch the robots
 	if err := API.FetchRobots(CTX); err != nil {
 		color.Yellow(fmt.Sprintf("⚠️ [ %s ] Could not get robot details. Retrying in %d seconds...", getTimeString(), CHECK_INTERVAL))
