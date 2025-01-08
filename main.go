@@ -28,6 +28,10 @@ var LED_MAP = map[string][]int{
 	"YELLOW" : []int{255, 255, 0},
 }
 
+func getTimeString() string {
+	return time.Now().Format("2006-01-02 15:04:05")
+}
+
 func loginToServiceAndSetContext(){
 	
 	API = robot.New(USERNAME, PASSWORD)
@@ -47,7 +51,7 @@ func loginToServiceAndSetContext(){
 
 		color.Red("🚫 Could not login to robot.")		
 		color.Red(" > " + fmt.Sprintf("%s", err.Error()))
-		color.Red(fmt.Sprintf(" > Waiting %f seconds before retrying login...\n\n", LOGIN_RETRY_DELAY))
+		color.Red(fmt.Sprintf(" > [ %s ] Waiting %f seconds before retrying login...\n\n", getTimeString(), LOGIN_RETRY_DELAY))
 
 		time.Sleep(time.Second * time.Duration(LOGIN_RETRY_DELAY))
 		loginToServiceAndSetContext()
@@ -73,19 +77,19 @@ func shouldSignalError(status float64) bool {
 // mapUnitStatusToString converts unit status codes to human-readable strings
 func mapUnitStatusToString(status float64) string {
 	statusMap := map[float64]string{
-		0:  "Ready",
-		1:  "Clean Cycle in Progress",
-		2:  "Clean Cycle Complete",
-		3:  "Cat Sensor Fault",
-		4:  "Drawer full - will still cycle",
-		5:  "Drawer full - will still cycle",
-		6:  "Cat Sensor Timing",
-		7:  "Cat Sensor Interrupt",
-		8:  "Bonnet Removed",
-		9:  "Paused",
-		10: "Off",
-		11: "Drawer full - will not cycle",
-		12: "Drawer full - will not cycle",
+		0:  "Ready.",
+		1:  "Clean Cycle in Progress.",
+		2:  "Clean Cycle Complete.",
+		3:  "Cat Sensor Fault.",
+		4:  "Drawer full; Will still cycle.",
+		5:  "Drawer full; Will still cycle",
+		6:  "Cat Sensor Timing.",
+		7:  "Cat Sensor Interrupt.",
+		8:  "Bonnet Removed.",
+		9:  "Paused.",
+		10: "Off.",
+		11: "Drawer full; Will not cycle.",
+		12: "Drawer full; Will not cycle.",
 	}
 	if description, ok := statusMap[status]; ok {
 		return description
@@ -105,7 +109,7 @@ func checkStatusOfRobot(checkCounter int){
 
 	// Fetch the robots
 	if err := API.FetchRobots(CTX); err != nil {
-		color.Yellow(fmt.Sprintf("⚠️  Could not get robot details. Retrying in %d seconds...", CHECK_INTERVAL))
+		color.Yellow(fmt.Sprintf("⚠️ [ %s ] Could not get robot details. Retrying in %d seconds...", getTimeString(), CHECK_INTERVAL))
 		color.Yellow(" > " + fmt.Sprintf("%s", err.Error()))
 		time.Sleep(time.Second * time.Duration(CHECK_INTERVAL))
 		checkStatusOfRobot(checkCounter + 1)
@@ -114,26 +118,31 @@ func checkStatusOfRobot(checkCounter int){
 
 		// Loop through each robot and display details
 		for idx, r := range API.Robots() {
-			color.Magenta(fmt.Sprintf("\n>>>>>>>>>>\n>> Robot %d:\n>>>>>>>>>>\n", idx))
-			color.Magenta(fmt.Sprintf("\tRobot ID: %s\n", r.LitterRobotID))
-			color.Magenta(fmt.Sprintf("\tName: %s\n", r.Name))
+			color.Magenta(fmt.Sprintf("\n>>>>>>>>>>\n>> Robot %d:\n>>>>>>>>>>\n\n", idx))
+			color.Magenta("\tRobot ID:")
+			color.White(fmt.Sprintf("\t%s\n\n", r.LitterRobotID))
+			
+			color.Magenta("\tName:")
+			color.White(fmt.Sprintf("\t%s\n\n", r.Name))
 	
 			// Fetch unit status from the robot struct
 			unitStatus := r.UnitStatus
 	
 			// Map unit status to human-readable string
 			statusText := mapUnitStatusToString(unitStatus)
-			color.Magenta(fmt.Sprintf("\tUnit Status: %s\n", statusText))
+			color.Magenta("\tUnit Status:\n")
+			color.White(fmt.Sprintf("\t%s\n\n", statusText))
 	
 			shouldSignalError := shouldSignalError(unitStatus)
 	
 			if shouldSignalError {
-				color.Red("\n\t‼️  Robot needs attention\n\n")
+				color.Magenta("\tAction needed?")
+				color.Red("\t‼️  Robot needs attention\n\n")
 			} else {
 				color.Green("\n\t✅ Robot is happy :)\n\n")
 			}
 	
-			color.Cyan(fmt.Sprintf(" > Waiting %d seconds before checking again...\n\n", CHECK_INTERVAL))
+			color.Cyan(fmt.Sprintf(" > [ %s ] Waiting %d seconds before checking again...\n\n", getTimeString(), CHECK_INTERVAL))
 			time.Sleep(time.Second * time.Duration(CHECK_INTERVAL))
 	
 		}
