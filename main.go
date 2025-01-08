@@ -79,7 +79,9 @@ func mapUnitStatusToString(status float64) string {
 
 func checkStatusOfRobot(checkCounter int){
 
-	if checkCounter > 10 {
+	totalTimeSinceLastLogin := time.Second * time.Duration(checkCounter * CHECK_INTERVAL) 
+
+	if totalTimeSinceLastLogin >= time.Minute * 10 {
 		loginToServiceAndSetContext()
 		checkCounter = 0
 	}
