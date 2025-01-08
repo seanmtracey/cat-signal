@@ -16,6 +16,35 @@ var USERNAME string
 var PASSWORD string
 var CHECK_INTERVAL int
 
+var API *robot.Client
+var CTX context.Context
+
+var LED_MAP = map[string][]int{
+	"RED"    : []int{255, 0, 0},
+	"GREEN"  : []int{0, 255, 0},
+	"BLUE"   : []int{0, 0, 255},
+	"YELLOW" : []int{255, 255, 0},
+}
+
+func loginToServiceAndSetContext(){
+	
+	API = robot.New(USERNAME, PASSWORD)
+	CTX = context.Background()
+
+	color.Cyan(" > Logging in to service and setting context for requests.")
+
+	// Log in to the API
+	err := API.Login(CTX)
+	if err != nil {
+		color.Red("🚫 Could not log-in to robot.")
+		fmt.Println(err)
+		os.Exit(1)
+	} else {
+		color.Green("✅ Logged-in to robot service.")
+	}
+
+}
+
 func shouldSignalError(status float64) bool {
 
 	if status >= 3 && status < 6 || status >= 11 && status <= 12 {
@@ -48,49 +77,41 @@ func mapUnitStatusToString(status float64) string {
 	return "Unknown Status"
 }
 
-func checkStatusOfRobot(){
+func checkStatusOfRobot(checkCounter int){
 
-	// Initialize API client
-	api := robot.New(USERNAME, PASSWORD)
-	ctx := context.Background()
-
-	// Log in to the API
-	err := api.Login(ctx)
-	if err != nil {
-		color.Red("🚫 Could not log-in to robot.")
-		fmt.Println(err)
-		os.Exit(1)
-	} else {
-		color.Green("✅ Logged-in to robot service.")
+	if checkCounter > 10 {
+		loginToServiceAndSetContext()
+		checkCounter = 0
 	}
 
 	// Fetch the robots
-	if err := api.FetchRobots(ctx); err != nil {
+	if err := API.FetchRobots(CTX); err != nil {
 		color.Yellow(fmt.Sprintf("⚠️  Could not get robot details. Retrying in %d seconds...", CHECK_INTERVAL))
 		fmt.Println(err)
 		time.Sleep(time.Second * time.Duration(CHECK_INTERVAL))
-		checkStatusOfRobot()
+		checkStatusOfRobot(checkCounter + 1)
 		
 	} else {
 
 		// Loop through each robot and display details
-		for _, r := range api.Robots() {
-			color.Cyan(fmt.Sprintf("\tRobot ID: %s\n", r.LitterRobotID))
-			color.Cyan(fmt.Sprintf("\tName: %s\n", r.Name))
+		for idx, r := range API.Robots() {
+			color.Magenta(fmt.Sprintf("\n>>>>>>>>>>\n>> Robot %d:\n>>>>>>>>>>\n", idx))
+			color.Magenta(fmt.Sprintf("\tRobot ID: %s\n", r.LitterRobotID))
+			color.Magenta(fmt.Sprintf("\tName: %s\n", r.Name))
 	
 			// Fetch unit status from the robot struct
 			unitStatus := r.UnitStatus
 	
 			// Map unit status to human-readable string
 			statusText := mapUnitStatusToString(unitStatus)
-			color.Cyan(fmt.Sprintf("\tUnit Status: %s\n", statusText))
+			color.Magenta(fmt.Sprintf("\tUnit Status: %s\n", statusText))
 	
 			shouldSignalError := shouldSignalError(unitStatus)
 	
 			if shouldSignalError {
-				color.Red("‼️  Robot needs attention")
+				color.Red("\n\t‼️  Robot needs attention\n\n")
 			} else {
-				color.Green("✅ Robot is happy :)")
+				color.Green("\n\t✅ Robot is happy :)\n\n")
 			}
 	
 			color.Cyan(fmt.Sprintf(" > Waiting %d seconds before checking again...\n\n", CHECK_INTERVAL))
@@ -98,10 +119,9 @@ func checkStatusOfRobot(){
 	
 		}
 
-		checkStatusOfRobot()
+		checkStatusOfRobot(checkCounter + 1)
 
 	}
-
 
 }
 
@@ -155,8 +175,7 @@ func main() {
 
 	}
 
-	fmt.Println()
-
-	checkStatusOfRobot()
+	loginToServiceAndSetContext()
+	checkStatusOfRobot(0)
 
 }
