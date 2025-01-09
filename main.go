@@ -16,6 +16,7 @@ import (
 var USERNAME string
 var PASSWORD string
 var CHECK_INTERVAL int
+var CHECK_COUNTER int
 
 var LOGIN_RETRY_DELAY float64 = 5.0
 var API *robot.Client
@@ -101,24 +102,24 @@ func mapUnitStatusToString(status float64) string {
 
 }
 
-func checkStatusOfRobot(checkCounter int){
+func checkStatusOfRobot(){
 
-	totalTimeSinceLastLogin := time.Second * time.Duration(checkCounter * CHECK_INTERVAL) 
+	totalTimeSinceLastLogin := time.Second * time.Duration(CHECK_COUNTER * CHECK_INTERVAL) 
 
 	if totalTimeSinceLastLogin >= time.Minute * 10 {
 		color.Yellow(" > Session is too old. Re-authenticating...")
 		loginToServiceAndSetContext()
-		checkCounter = 0
+		CHECK_COUNTER = 0
 	}
 
 	color.Cyan(fmt.Sprintf("\n > [ %s ] Getting status of litter robots...\n", getTimeString()))
 
 	// Fetch the robots
 	if err := API.FetchRobots(CTX); err != nil {
+
 		color.Yellow(fmt.Sprintf("⚠️ [ %s ] Could not get robot details. Retrying in %d seconds...", getTimeString(), CHECK_INTERVAL))
 		color.Yellow(" > " + fmt.Sprintf("%s", err.Error()))
 		time.Sleep(time.Second * time.Duration(CHECK_INTERVAL))
-		checkStatusOfRobot(checkCounter + 1)
 		
 	} else {
 
@@ -155,9 +156,9 @@ func checkStatusOfRobot(checkCounter int){
 	
 		}
 
-		checkStatusOfRobot(checkCounter + 1)
-
 	}
+	
+	CHECK_COUNTER += 1
 
 }
 
@@ -212,6 +213,10 @@ func main() {
 	}
 
 	loginToServiceAndSetContext()
-	checkStatusOfRobot(0)
+
+	for{
+		checkStatusOfRobot()
+	}
+
 
 }
