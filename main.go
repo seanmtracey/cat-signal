@@ -22,6 +22,36 @@ var LOGIN_RETRY_DELAY float64 = 5.0
 var API *robot.Client
 var CTX context.Context
 
+var LED_DIRECTION = []int{ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, }
+var LED_VALUES    = []int{ 21, 42, 63, 84, 105, 126, 147, 168, 189, 210, 231, 252, }
+
+func animate() {
+
+	fmt.Print("[ ")
+
+	for idx, _ := range LED_VALUES{
+		
+		if LED_DIRECTION[idx] == 1 {
+			LED_VALUES[idx] += int(math.Floor(255 / 21))
+		} else {
+			LED_VALUES[idx] -= int(math.Floor(255 / 21))
+		}
+
+		if LED_VALUES[idx] >= 255 {
+			LED_VALUES[idx] = 255
+			LED_DIRECTION[idx] = -1
+		} else if LED_VALUES[idx] <= 0 {
+			LED_VALUES[idx] = 0
+			LED_DIRECTION[idx] = 1
+		}
+			
+		fmt.Printf("%d, ", LED_VALUES[idx])
+	}
+
+	fmt.Print(" ]\n")
+
+}
+
 var LED_MAP = map[string][]int{
 	"RED"    : []int{255, 0, 0},
 	"GREEN"  : []int{0, 255, 0},
@@ -169,6 +199,12 @@ func main() {
 	if dotenvErr != nil {
 		color.Cyan(">  No .env file detected. Defaulting to system env-vars instead.")
 	}
+
+	// Animate LEDs when they're wired up.
+	/*for {
+		animate()
+		time.Sleep((1000 / 40) * time.Millisecond)
+	}*/
 
 	// Retrieve credentials from environment variables
 	USERNAME = os.Getenv("ROBOT_EMAIL")
