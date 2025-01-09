@@ -67,7 +67,7 @@ func loginToServiceAndSetContext(){
 
 func shouldSignalError(status float64) bool {
 
-	if status >= 3 && status < 6 || status >= 11 && status <= 12 {
+	if status >= 3 && status < 6 || status == 7 || status >= 11 && status <= 12 {
 		return true
 	}
 
