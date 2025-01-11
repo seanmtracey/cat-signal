@@ -38,6 +38,12 @@ var (
 	brightness     = flag.Int("brightness", 64, "Brightness (0-255)")
 )
 
+func setLEDColor(ledColor ledColor.RGBA){
+	mu.Lock()
+	LEDColor = ledColor // Yellow
+	mu.Unlock()
+}
+
 // Animate LEDs
 func animate(c *ws281x.Canvas) {
 	bounds := c.Bounds()
@@ -109,19 +115,15 @@ func loginToServiceAndSetContext() {
 			LOGIN_RETRY_DELAY = math.Min(math.Round(LOGIN_RETRY_DELAY*1.25), 300)
 			color.Red("🚫 Could not login to robot.")
 			
-			mu.Lock()
-			LEDColor = ledColor.RGBA{255, 255, 0, 255} // Yellow
-			mu.Unlock()
+			setLEDColor(ledColor.RGBA{255, 255, 0, 255})
 			
 			color.Red(" > " + fmt.Sprintf("%s", err.Error()))
 			color.Red(fmt.Sprintf(" > [ %s ] Waiting %f seconds before retrying login...\n\n", getTimeString(), LOGIN_RETRY_DELAY))
 			time.Sleep(time.Second * time.Duration(LOGIN_RETRY_DELAY))
 		} else {
 			color.Green("✅ Logged-in to robot service.")
-			
-			mu.Lock()
-			LEDColor = ledColor.RGBA{0, 0, 255, 255} // Green
-			mu.Unlock()
+
+			setLEDColor(ledColor.RGBA{0, 0, 255, 255})
 
 			LOGIN_RETRY_DELAY = 5.0
 			break
@@ -161,14 +163,14 @@ func checkStatusOfRobot() {
 
 			if shouldSignalError(unitStatus) {
 				color.Red("\t‼️  Robot needs attention\n\n")
-				mu.Lock()
-				LEDColor = ledColor.RGBA{255, 0, 0, 255} // Red
-				mu.Unlock()
+
+				setLEDColor(ledColor.RGBA{255, 0, 0, 255}) // Red
+
 			} else {
 				color.Green("\t✅ Robot is happy :)\n\n")
-				mu.Lock()
-				LEDColor = ledColor.RGBA{0, 255, 0, 255} // Green
-				mu.Unlock()
+
+				setLEDColor(ledColor.RGBA{0, 255, 0, 255}) // Green
+
 			}
 		}
 	}
@@ -243,10 +245,8 @@ func main() {
 
 	err = c.Initialize()
 	fatal(err)
-	
-	mu.Lock()
-	LEDColor = ledColor.RGBA{0, 0, 255, 255} // Blue
-	mu.Unlock()
+
+	setLEDColor(ledColor.RGBA{0, 0, 255, 255}) // Blue
 
 	go animate(c)
 	loginToServiceAndSetContext()
@@ -255,5 +255,5 @@ func main() {
 		checkStatusOfRobot()
 		time.Sleep(time.Second * time.Duration(CHECK_INTERVAL))
 	}
-	
+
 }
