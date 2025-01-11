@@ -4,13 +4,15 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	ledColor "image/color" // Aliasing image/color to ledColor
 	"math"
 	"os"
+	"os/signal"
 	"strconv"
 	"sync"
+	"syscall"
 	"time"
 
-	ledColor "image/color" // Aliasing image/color to ledColor
 	"github.com/fatih/color"
 	"github.com/joho/godotenv"
 	"github.com/mcuadros/go-rpi-ws281x"
@@ -38,9 +40,9 @@ var (
 	brightness     = flag.Int("brightness", 64, "Brightness (0-255)")
 )
 
-func setLEDColor(ledColor ledColor.RGBA){
+func setLEDColor(color ledColor.RGBA) {
 	mu.Lock()
-	LEDColor = ledColor // Yellow
+	LEDColor = color
 	mu.Unlock()
 }
 
@@ -54,14 +56,12 @@ func animate(c *ws281x.Canvas) {
 		mu.Unlock()
 
 		for idx := range LED_VALUES {
-			// Update LED values based on the direction
 			if LED_DIRECTION[idx] == 1 {
 				LED_VALUES[idx] += int(math.Floor(255 / 21))
 			} else {
 				LED_VALUES[idx] -= int(math.Floor(255 / 21))
 			}
 
-			// Check bounds and reverse direction if needed
 			if LED_VALUES[idx] >= 255 {
 				LED_VALUES[idx] = 255
 				LED_DIRECTION[idx] = -1
@@ -71,34 +71,27 @@ func animate(c *ws281x.Canvas) {
 			}
 		}
 
-		// Render the LEDs with the current brightness levels
 		for y := bounds.Min.Y; y < bounds.Max.Y; y++ {
 			for x := bounds.Min.X; x < bounds.Max.X; x++ {
-				idx := x // Use the x-coordinate as the LED index
+				idx := x
 				if idx < len(LED_VALUES) {
-					brightness := float64(LED_VALUES[idx]) / 255.0 // Scale brightness
+					brightness := float64(LED_VALUES[idx]) / 255.0
 					c.Set(x, y, scaleColor(baseColor, brightness))
 				}
 			}
 		}
 		c.Render()
-
-		time.Sleep(100 * time.Millisecond) // Control animation speed
+		time.Sleep(100 * time.Millisecond)
 	}
 }
 
 // Helper function to scale RGB color by brightness
 func scaleColor(col ledColor.RGBA, brightness float64) ledColor.RGBA {
-	if brightness < 0 {
-		brightness = 0
-	} else if brightness > 1 {
-		brightness = 1
-	}
 	return ledColor.RGBA{
 		R: uint8(float64(col.R) * brightness),
 		G: uint8(float64(col.G) * brightness),
 		B: uint8(float64(col.B) * brightness),
-		A: col.A, // Alpha is typically left unchanged
+		A: col.A,
 	}
 }
 
@@ -112,21 +105,25 @@ func loginToServiceAndSetContext() {
 	for {
 		err := API.Login(CTX)
 		if err != nil {
+			
 			LOGIN_RETRY_DELAY = math.Min(math.Round(LOGIN_RETRY_DELAY*1.25), 300)
 			color.Red("🚫 Could not login to robot.")
-			
-			setLEDColor(ledColor.RGBA{255, 255, 0, 255})
-			
+
+			setLEDColor(ledColor.RGBA{255, 255, 0, 255}) // Yellow
+
 			color.Red(" > " + fmt.Sprintf("%s", err.Error()))
 			color.Red(fmt.Sprintf(" > [ %s ] Waiting %f seconds before retrying login...\n\n", getTimeString(), LOGIN_RETRY_DELAY))
 			time.Sleep(time.Second * time.Duration(LOGIN_RETRY_DELAY))
+
 		} else {
+
 			color.Green("✅ Logged-in to robot service.")
 
-			setLEDColor(ledColor.RGBA{0, 0, 255, 255})
+			setLEDColor(ledColor.RGBA{0, 0, 255, 255}) // Blue
 
 			LOGIN_RETRY_DELAY = 5.0
 			break
+			
 		}
 	}
 }
@@ -179,7 +176,7 @@ func checkStatusOfRobot() {
 
 // Utility functions
 func shouldSignalError(status float64) bool {
-	return (status >= 3 && status < 6) || (status == 7) || (status >= 11 && status <= 12)
+	return (status >= 3 && status < 6) || (status == 7) || (status >= 10 && status <= 12)
 }
 
 func mapUnitStatusToString(status float64) string {
@@ -208,10 +205,19 @@ func getTimeString() string {
 	return time.Now().Format("2006-01-02 15:04:05")
 }
 
-func fatal(err error) {
-	if err != nil {
-		panic(err)
-	}
+func handleShutdown(c *ws281x.Canvas) {
+	signalChan := make(chan os.Signal, 1)
+	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		<-signalChan
+		color.Red("\nShutting down gracefully...")
+		setLEDColor(ledColor.RGBA{0, 0, 0, 255}) // Black
+		c.Render()
+		time.Sleep(100 * time.Millisecond)
+		c.Close()
+		os.Exit(0)
+	}()
 }
 
 func main() {
@@ -246,6 +252,7 @@ func main() {
 	err = c.Initialize()
 	fatal(err)
 
+	handleShutdown(c)
 	setLEDColor(ledColor.RGBA{0, 0, 255, 255}) // Blue
 
 	go animate(c)
@@ -255,5 +262,10 @@ func main() {
 		checkStatusOfRobot()
 		time.Sleep(time.Second * time.Duration(CHECK_INTERVAL))
 	}
+}
 
+func fatal(err error) {
+	if err != nil {
+		panic(err)
+	}
 }
