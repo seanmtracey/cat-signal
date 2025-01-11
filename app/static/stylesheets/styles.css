@@ -1,0 +1,173 @@
+*{
+    font-family: 'Rethink Sans', sans-serif;
+}
+
+*[data-visible="false"]{
+    display: none !important;
+}
+
+html, body {
+	background: black;
+	font-display: swap;
+	font-family: 'Rethink Sans', sans-serif;
+	color: white;
+	font-size: 14pt;
+	margin: 0px;
+	background-attachment: scroll;
+	background-repeat: repeat-y;
+	width: 100%;
+	min-height: 100%;
+	font-weight: 400;
+	height: 100%;
+	overflow-y: scroll;
+}
+
+body{
+    box-sizing: border-box;
+    padding: 1em;
+}
+
+header{
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+header nav{
+    box-sizing: border-box;
+    padding: 1em;
+}
+
+header nav img{
+    height: 4em;
+}
+
+h1{
+    font-size: 1.5em;
+}
+
+ol{
+    padding-bottom: 20vh;
+    padding-left: 0;
+}
+
+ol li{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1em;
+    background-image: url("/images/pixel.jpg");
+    background-repeat: repeat-x;
+    background-position: 50%;
+}
+
+ol li a{
+    text-decoration: none;
+    color: white;
+    background-color: black;
+    padding-right: 1em;
+}
+
+ol li span{
+    height: 25px;
+    width: 25px;
+    display: block;
+    background: black;
+    border: 1px solid white;
+    border-radius: 100%;
+}
+
+form{
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    box-sizing: border-box;
+    left: 0;
+    padding: 1em;
+    background: black;
+}
+
+form input[type="submit"]{
+    background: linear-gradient(45deg, #f7f41c, #ffc207);
+    border: 2px solid black;
+    font-size: 1em;
+    width: 100%;
+    padding: 1em;
+    font-weight: 600;
+    outline: 3px solid yellow;
+}
+
+#colorSelectorOverlay{
+    position: fixed;
+    top: 0;
+    left: 0;
+    background: rgba(0, 0, 0, 0.75);
+    width: 100%;
+    height: 100%;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 1em;
+}
+
+#colorSelector{
+    width: 100%;
+    border: 2px solid white;
+    box-sizing: border-box;
+    padding: 1em;
+    background: black;
+}
+
+#colorSelector h3{ 
+    margin-top: 0;
+}
+
+div#colorSelection{
+    position: static;
+    padding: 0 0 1em;
+}
+
+div#colorSelection ul{
+    padding: 0;
+    margin: 0;
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    box-sizing: border-box;
+    /* border: 1px solid white; */
+}
+
+div#colorSelection ul li{
+    border: 1px solid white;
+    list-style: none;
+    height: 30px;
+    width: 30px;
+    border-radius: 100%;
+}
+
+*[data-color="red"]{
+    background-color: red;
+}
+
+*[data-color="yellow"]{
+    background-color: yellow;
+}
+
+*[data-color="green"]{
+    background-color: lime;
+}
+
+*[data-color="purple"]{
+    background-color: darkviolet;
+}
+
+*[data-color="orange"]{
+    background-color: orange;
+}
+
+*[data-color="blue"]{
+    background-color: aqua;;
+}
