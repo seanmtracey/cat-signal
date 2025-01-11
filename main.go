@@ -171,7 +171,11 @@ func checkStatusOfRobot() {
 			}
 		}
 	}
+
+	color.Cyan(fmt.Sprintf(" > [ %s ] Waiting %d seconds before checking again...\n\n", getTimeString(), CHECK_INTERVAL))
+
 	CHECK_COUNTER++
+
 }
 
 // Utility functions
