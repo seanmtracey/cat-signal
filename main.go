@@ -1,25 +1,30 @@
 package main
 
 import (
+	"fmt"
+	"os"
+	"os/signal"
 	"bufio"
 	"context"
 	"flag"
-	"fmt"
 	"strconv"
-	ledColor "image/color" // Aliasing image/color to ledColor
 	"math"
-	"os"
-	"os/signal"
 	"strings"
 	"sync"
 	"syscall"
 	"time"
+	ledColor "image/color"
 
 	"github.com/fatih/color"
 	"github.com/joho/godotenv"
+	"github.com/gofiber/fiber/v2"
 	"github.com/mcuadros/go-rpi-ws281x"
 	robot "github.com/tlkamp/litter-api/v2/pkg/client"
 )
+
+type Payload struct {
+	Data []string `json:"data"`
+}
 
 // Global variables
 var (
@@ -80,6 +85,27 @@ func loadStatusColors(filename string) ([]ledColor.RGBA, error) {
 	}
 
 	return colors, nil
+}
+
+func setStatusColors(){
+	
+	var err error
+	statusColors, err = loadStatusColors("status-colors.txt")
+	if err != nil {
+		color.Red("Failed to load status colors. Using default colors.")
+		
+		var colors []ledColor.RGBA
+
+		for _ = range 10 {
+			
+			colors = append(colors, colorNameToRGB["black"])
+
+		}
+		
+		statusColors = colors
+
+	}
+
 }
 
 // Set LED color safely
@@ -166,6 +192,9 @@ func loginToServiceAndSetContext() {
 }
 
 func checkStatusOfRobot() {
+
+	setStatusColors()
+
 	totalTimeSinceLastLogin := time.Second * time.Duration(CHECK_COUNTER*CHECK_INTERVAL)
 
 	if totalTimeSinceLastLogin >= time.Minute*10 {
@@ -245,27 +274,61 @@ func handleShutdown(c *ws281x.Canvas) {
 	}()
 }
 
+func startServer(){
+
+	app := fiber.New()
+
+	// Serve static files from the /static directory
+	app.Static("/", "./static")
+
+	// POST /update endpoint
+	app.Post("/update", func(c *fiber.Ctx) error {
+		// Parse the request body into the Payload struct
+		var payload Payload
+		if err := c.BodyParser(&payload); err != nil {
+			fmt.Printf("Error parsing request body: %v", err)
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid JSON payload")
+		}
+
+		// Open the file for writing
+		file, err := os.Create("status-colors.txt")
+		if err != nil {
+			fmt.Printf("Error creating file: %v", err)
+			return c.Status(fiber.StatusInternalServerError).SendString("Failed to write to file")
+		}
+		defer file.Close()
+
+		// Write each color value to the file
+		for _, color := range payload.Data {
+			if _, err := file.WriteString(color + "\n"); err != nil {
+				fmt.Printf("Error writing to file: %v", err)
+				return c.Status(fiber.StatusInternalServerError).SendString("Failed to write to file")
+			}
+		}
+
+		fmt.Println("Colors successfully written to status-colors.txt")
+
+		c.Status(200)
+		return c.Send(nil)
+
+	})
+
+	app.Get("/colors", func(c *fiber.Ctx) error {
+		
+		c.Status(200)
+		return c.SendFile("status-colors.txt")
+
+	})
+
+	app.Listen(":80")
+
+}
+
 func main() {
+
 	dotenvErr := godotenv.Load()
 	if dotenvErr != nil {
 		color.Cyan(">  No .env file detected. Defaulting to system env-vars instead.")
-	}
-
-	var err error
-	statusColors, err = loadStatusColors("status-colors.txt")
-	if err != nil {
-		color.Red("Failed to load status colors. Using default colors.")
-		
-		var colors []ledColor.RGBA
-
-		for _ = range 10 {
-			
-			colors = append(colors, colorNameToRGB["black"])
-
-		}
-		
-		statusColors = colors
-
 	}
 
 	USERNAME = os.Getenv("ROBOT_EMAIL")
@@ -300,6 +363,8 @@ func main() {
 
 	handleShutdown(c)
 	go animate(c)
+
+	go startServer()
 
 	loginToServiceAndSetContext()
 
