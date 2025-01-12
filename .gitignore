@@ -3,3 +3,8 @@ siren
 cat-signal
 Archive.zip
 blink.go
+app/app
+app/cat-signal-app
+.DS_Store
+status-colors.txt
+static.zip

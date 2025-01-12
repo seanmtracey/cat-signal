@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Cat-Signal</title>
+    <link rel='stylesheet' href='/stylesheets/styles.css' />
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=yes" />
+</head>
+<body>
+    
+    <header>
+        <nav><img src="/images/icon.png" /></nav>
+    </header>
+
+    <h1>Statuses</h1>
+
+    <ol start="0">
+        <li data-statuscode="0"><a href="#">Ready</a><span data-color="black"></span></li>
+        <li data-statuscode="1"><a href="#">Clean Cycle in Progress</a><span data-color="black"></span></li>
+        <li data-statuscode="2"><a href="#">Clean Cycle Complete</a><span data-color="black"></span></li>
+        <li data-statuscode="3"><a href="#">Cat Sensor Fault</a><span data-color="black"></span></li>
+        <li data-statuscode="4"><a href="#">Drawer full; Will still cycle</a><span data-color="black"></span></li>
+        <li data-statuscode="5"><a href="#">Drawer full; Will still cycle</a><span data-color="black"></span></li>
+        <li data-statuscode="6"><a href="#">Cat Sensor Timing</a><span data-color="black"></span></li>
+        <li data-statuscode="7"><a href="#">Cat Sensor Interrupt</a><span data-color="black"></span></li>
+        <li data-statuscode="8"><a href="#">Bonnet Removed</a><span data-color="black"></span></li>
+        <li data-statuscode="9"><a href="#">Paused</a><span data-color="black"></span></li>
+        <li data-statuscode="10"><a href="#">Off</a><span data-color="black"></span></li>
+        <li data-statuscode="11"><a href="#">Drawer full; Will not cycle</a><span data-color="black"></span></li>
+        <li data-statuscode="12"><a href="#">Drawer full; Will not cycle</a><span data-color="black"></span></li>
+    </ol>
+
+    <div id="colorSelectorOverlay" data-visible="false">
+
+        <div id="colorSelector">
+
+            <h3>Select color:</h3>
+
+            <div id="colorSelection">
+
+                <ul>
+                    <li data-color="red"></li>
+                    <li data-color="yellow"></li>
+                    <li data-color="green"></li>
+                    <li data-color="purple"></li>
+                    <li data-color="orange"></li>
+                    <li data-color="blue"></li>
+                    <li data-color="black"></li>
+                </ul>
+
+            </div>
+
+        </div>
+    
+    </div>
+
+    <form id="saveForm" method="POST" action="/update">
+        <input type="submit" value="Save Settings" />
+    </form>
+    
+    <script>
+
+        (function(){
+
+            'use strict';
+
+            const form = document.querySelector("form#saveForm");
+            const spans = Array.from(document.querySelectorAll('ol li span'));
+            const colorSelectorOverlay = document.querySelector("#colorSelectorOverlay");
+
+            const colorSelectionOptions = Array.from(document.querySelectorAll("#colorSelection li"));
+
+            let settingColor;
+
+            form.addEventListener("submit", function(e){
+                e.preventDefault();
+                e.stopImmediatePropagation();
+
+                const payload = {
+                    data : spans.map(span => {
+                        return span.dataset.color;
+                    })
+                };
+
+                console.log(payload);
+
+                fetch(this.action, {
+                        method : this.method,
+                        headers : {
+                            "Content-Type" : "application/json"
+                        },
+                        body : JSON.stringify(payload)
+                    })
+                    .then(res => {
+                        if(!res.ok){
+                            throw res;
+                        } else {
+                            return res.text();
+                        }
+                    })
+                    .then(response => {
+                        console.log(response);
+                    })
+                    .catch(err => {
+                        console.log("Form err:", err);
+                    })
+                ;
+
+                console.log("Submitted");
+
+            }, false);
+
+            spans.forEach(span => {
+                
+                span.addEventListener("click", function(e){
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    
+                    console.log(this.dataset.color);
+
+                    settingColor = this;
+                    colorSelectorOverlay.dataset.visible = "true";
+
+                }, false);
+
+            })
+
+            colorSelectionOptions.forEach(option => {
+                
+                option.addEventListener("click", function(){
+                    settingColor.dataset.color = this.dataset.color;
+                    colorSelectorOverlay.dataset.visible = "false";
+                }, false);
+
+            }, false);
+
+            fetch("/colors")
+                .then(res => {
+                    if(!res.ok){
+                        throw res;
+                    } else {
+                        return res.text();
+                    }
+                })
+                .then(response => {
+                    console.log(response);
+
+                    response.split("\n").forEach((line, idx) => {
+                        // console.log(line);
+                        // debugger;
+
+                        if(spans[idx]){
+                            spans[idx].dataset.color = line;
+                        }
+
+
+                    });
+
+                })
+                .catch(err => {
+                    console.log("Could not get current colors!", err);
+                })
+            ;
+
+        }());
+
+    </script>
+
+</body>
+</html>
