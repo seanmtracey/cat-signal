@@ -1,14 +1,16 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"flag"
 	"fmt"
+	"strconv"
 	ledColor "image/color" // Aliasing image/color to ledColor
 	"math"
 	"os"
 	"os/signal"
-	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -30,7 +32,7 @@ var (
 	API               *robot.Client
 	CTX               context.Context
 
-	LEDColor       ledColor.RGBA = ledColor.RGBA{255, 0, 0, 255} // Default LED color (red)
+	LEDColor       ledColor.RGBA = ledColor.RGBA{0, 0, 255, 255} // Default LED color (blue)
 	mu             sync.Mutex                                   // Mutex to protect LEDColor during updates
 	LED_DIRECTION  = []int{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}
 	LED_VALUES     = []int{21, 42, 63, 84, 105, 126, 147, 168, 189, 210, 231, 252}
@@ -38,8 +40,49 @@ var (
 	width          = flag.Int("width", 12, "LED matrix width")
 	height         = flag.Int("height", 1, "LED matrix height")
 	brightness     = flag.Int("brightness", 64, "Brightness (0-255)")
+	statusColors   []ledColor.RGBA
 )
 
+// Map of color names to RGB values
+var colorNameToRGB = map[string]ledColor.RGBA{
+	"red":    {255, 0, 0, 255},
+	"green":  {0, 255, 0, 255},
+	"blue":   {0, 0, 255, 255},
+	"yellow": {255, 255, 0, 255},
+	"orange": {255, 165, 0, 255},
+	"black":  {0, 0, 0, 255},
+	"white":  {255, 255, 255, 255},
+}
+
+// Helper function to parse colors from a file
+func loadStatusColors(filename string) ([]ledColor.RGBA, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var colors []ledColor.RGBA
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := strings.ToLower(strings.TrimSpace(scanner.Text())) // Normalize color name
+		if rgb, ok := colorNameToRGB[line]; ok {
+			colors = append(colors, rgb)
+		} else {
+			color.Red("Unknown color name in status-colors.txt: %s", line)
+			colors = append(colors, colorNameToRGB["black"]) // Default to black for unknown colors
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return colors, nil
+}
+
+// Set LED color safely
 func setLEDColor(color ledColor.RGBA) {
 	mu.Lock()
 	LEDColor = color
@@ -57,9 +100,9 @@ func animate(c *ws281x.Canvas) {
 
 		for idx := range LED_VALUES {
 			if LED_DIRECTION[idx] == 1 {
-				LED_VALUES[idx] += int(math.Floor(255 / 21))
+				LED_VALUES[idx] += int(255 / 21)
 			} else {
-				LED_VALUES[idx] -= int(math.Floor(255 / 21))
+				LED_VALUES[idx] -= int(255 / 21)
 			}
 
 			if LED_VALUES[idx] >= 255 {
@@ -105,7 +148,6 @@ func loginToServiceAndSetContext() {
 	for {
 		err := API.Login(CTX)
 		if err != nil {
-			
 			LOGIN_RETRY_DELAY = math.Min(math.Round(LOGIN_RETRY_DELAY*1.25), 300)
 			color.Red("🚫 Could not login to robot.")
 
@@ -114,16 +156,11 @@ func loginToServiceAndSetContext() {
 			color.Red(" > " + fmt.Sprintf("%s", err.Error()))
 			color.Red(fmt.Sprintf(" > [ %s ] Waiting %f seconds before retrying login...\n\n", getTimeString(), LOGIN_RETRY_DELAY))
 			time.Sleep(time.Second * time.Duration(LOGIN_RETRY_DELAY))
-
 		} else {
-
 			color.Green("✅ Logged-in to robot service.")
-
 			setLEDColor(ledColor.RGBA{0, 0, 255, 255}) // Blue
-
 			LOGIN_RETRY_DELAY = 5.0
 			break
-			
 		}
 	}
 }
@@ -141,7 +178,6 @@ func checkStatusOfRobot() {
 
 	if err := API.FetchRobots(CTX); err != nil {
 		color.Yellow(fmt.Sprintf("⚠️ [ %s ] Could not get robot details. Retrying in %d seconds...", getTimeString(), CHECK_INTERVAL))
-		color.Yellow(" > " + fmt.Sprintf("%s", err.Error()))
 		time.Sleep(time.Second * time.Duration(CHECK_INTERVAL))
 	} else {
 		registeredRobots := API.Robots()
@@ -153,36 +189,25 @@ func checkStatusOfRobot() {
 			color.Magenta("\tRobot Name:")
 			color.White(fmt.Sprintf("\t%s\n\n", r.Name))
 
-			unitStatus := r.UnitStatus
-			statusText := mapUnitStatusToString(unitStatus)
+			unitStatus := int(r.UnitStatus)
+			statusText := mapUnitStatusToString(float64(unitStatus))
 			color.Magenta("\tRobot Status:\n")
 			color.White(fmt.Sprintf("\t%s\n\n", statusText))
 
-			if shouldSignalError(unitStatus) {
-				color.Red("\t‼️  Robot needs attention\n\n")
-
-				setLEDColor(ledColor.RGBA{255, 0, 0, 255}) // Red
-
+			// Set LEDs to color based on unit status
+			if unitStatus < len(statusColors) {
+				setLEDColor(statusColors[unitStatus])
 			} else {
-				color.Green("\t✅ Robot is happy :)\n\n")
-
-				setLEDColor(ledColor.RGBA{0, 255, 0, 255}) // Green
-
+				setLEDColor(colorNameToRGB["black"]) // Default to black for out-of-range statuses
 			}
 		}
 	}
 
-	color.Cyan(fmt.Sprintf(" > [ %s ] Waiting %d seconds before checking again...\n\n", getTimeString(), CHECK_INTERVAL))
-
 	CHECK_COUNTER++
-
+	color.Cyan(fmt.Sprintf(" > [ %s ] Waiting %d seconds before checking again...\n\n", getTimeString(), CHECK_INTERVAL))
 }
 
 // Utility functions
-func shouldSignalError(status float64) bool {
-	return (status >= 3 && status < 6) || (status == 7) || (status >= 10 && status <= 12)
-}
-
 func mapUnitStatusToString(status float64) string {
 	statusMap := map[float64]string{
 		0:  "Ready",
@@ -205,10 +230,6 @@ func mapUnitStatusToString(status float64) string {
 	return "Unknown Status"
 }
 
-func getTimeString() string {
-	return time.Now().Format("2006-01-02 15:04:05")
-}
-
 func handleShutdown(c *ws281x.Canvas) {
 	signalChan := make(chan os.Signal, 1)
 	signal.Notify(signalChan, os.Interrupt, syscall.SIGTERM)
@@ -216,7 +237,7 @@ func handleShutdown(c *ws281x.Canvas) {
 	go func() {
 		<-signalChan
 		color.Red("\nShutting down gracefully...")
-		setLEDColor(ledColor.RGBA{0, 0, 0, 255}) // Black
+		setLEDColor(colorNameToRGB["black"]) // Black
 		c.Render()
 		time.Sleep(100 * time.Millisecond)
 		c.Close()
@@ -228,6 +249,23 @@ func main() {
 	dotenvErr := godotenv.Load()
 	if dotenvErr != nil {
 		color.Cyan(">  No .env file detected. Defaulting to system env-vars instead.")
+	}
+
+	var err error
+	statusColors, err = loadStatusColors("status-colors.txt")
+	if err != nil {
+		color.Red("Failed to load status colors. Using default colors.")
+		
+		var colors []ledColor.RGBA
+
+		for _ = range 10 {
+			
+			colors = append(colors, colorNameToRGB["black"])
+
+		}
+		
+		statusColors = colors
+
 	}
 
 	USERNAME = os.Getenv("ROBOT_EMAIL")
@@ -250,16 +288,19 @@ func main() {
 	config.Pin = *pin
 
 	c, err := ws281x.NewCanvas(*width, *height, &config)
-	fatal(err)
+	if err != nil {
+		panic(err)
+	}
 	defer c.Close()
 
 	err = c.Initialize()
-	fatal(err)
+	if err != nil {
+		panic(err)
+	}
 
 	handleShutdown(c)
-	setLEDColor(ledColor.RGBA{0, 0, 255, 255}) // Blue
-
 	go animate(c)
+
 	loginToServiceAndSetContext()
 
 	for {
@@ -268,8 +309,6 @@ func main() {
 	}
 }
 
-func fatal(err error) {
-	if err != nil {
-		panic(err)
-	}
+func getTimeString() string {
+	return time.Now().Format("2006-01-02 15:04:05")
 }

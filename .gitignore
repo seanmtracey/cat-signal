@@ -6,4 +6,4 @@ blink.go
 app/app
 app/cat-signal-app
 .DS_Store
-app/status-colors.txt
+status-colors.txt
