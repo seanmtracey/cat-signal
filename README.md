@@ -36,3 +36,8 @@ They are as follows:
 - **CHECK_INTERVAL**
     - The frequency that the status of each Litter Robot will be updated in seconds. Defaults to 60 seconds if not set.
 
+## App
+
+The program also includes a small web app which will allow you to set the color of the LEDs per status.
+
+When the `cat-signal` is started, you can access the app at `localhost:80`.
