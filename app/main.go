@@ -45,8 +45,16 @@ func main() {
 
 		log.Println("Colors successfully written to status-colors.txt")
 
-		// Respond with a success message
-		return c.SendString("Update received and written to file")
+		c.Status(200)
+		return c.Send(nil)
+
+	})
+
+	app.Get("/colors", func(c *fiber.Ctx) error {
+		
+		c.Status(200)
+		return c.SendFile("status-colors.txt")
+
 	})
 
 	// Start the server on port 3000
